@@ -1,3 +1,5 @@
+[toc]
+
 # WordPress官网429 too many requests无法访问和在线安装更新的解决办法
 
 从2019年10月初开始，国内访问 wordpress.org 官网一直提示 429 Too Many Requests，导致很多时候没办法在线更新WordPress核心、主题和插件，不知道为什么两个多月了，还是没有解决这个问题。
@@ -41,3 +43,45 @@ add_filter('site_transient_update_core', function($value){
 	return $value;
 });
 ```
+
+# php.ini 安装插件 upload_max_filesize 限制
+
+有两种方法，一种是在创建容器之前，将以下内容保存为文件 `uploades.ini` 复制到 `/usr/local/etc/php/conf.d` 文件夹下：
+
+```ini
+file_uploads = On
+memory_limit = 64M
+upload_max_filesize = 64M
+post_max_size = 64M
+max_execution_time = 600
+```
+
+所以将相关配置文件整合到 `yaml` 文件或者 `Dockerfile` 中。下面是整合到 `yaml` 文件中的示例：
+
+```yaml
+db:
+  image: mysql:latest
+  environment:
+    MYSQL_ROOT_PASSWORD: "PASSWORD-HERE"
+
+wordpress:
+  image: wordpress:latest
+  ports:
+    - "80:80"
+  links:
+    - db:mysql
+  volumes:
+    - uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+```
+
+**方法二** 更改 `WordPress` 容器中 `/var/www/html/.htaccess` 的文件内容，刷新之后就可以使用。更新以下内容到 `.htaccess` 中：
+
+```bash
+# BEGIN WordPress
+php_value upload_max_filesize 256M
+```
+
+**参考：**
+
+1. [How to get access to php.ini file - Open Source Projects / Compose - Docker Forums](https://forums.docker.com/t/how-to-get-access-to-php-ini-file/68986/4)
+2. [Increase PHP file upload limit · Issue #10 · docker-library/wordpress](https://github.com/docker-library/wordpress/issues/10)
